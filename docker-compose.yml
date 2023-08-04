@@ -1,0 +1,94 @@
+version: '3.9'
+
+services:
+  mongo:
+    command: mongod --port ${MONGO_PORT}
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          memory: 4000M
+    env_file:
+      - .env.mongo
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh $MONGO_IP_ADDRESS:$MONGO_PORT/test --quiet
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    hostname: mongo
+    image: mongo:6.0
+    ports:
+      - ${MONGO_PORT_EXTERNAL}:${MONGO_PORT}
+    expose:
+      - ${MONGO_PORT}
+    volumes:
+      - ./data/_init/mongo-init.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+      - volume_mongo:/data/db/
+  postgres:
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          memory: 1500M
+    env_file:
+      - .env.postgres
+    healthcheck:
+      interval: 30s
+      retries: 3
+      start_period: 20s
+      test:
+        ["CMD-SHELL", pg_isready" , "-U", "${POSTGRES_USER}", "-d", "${POSTGRES_DATABASE}", "-h", "postgres", "-p", "${POSTGRES_PORT}"]
+      timeout: 30s
+    hostname: postgres
+    image: postgres:15.2-alpine
+    ports:
+      - ${POSTGRES_PORT_EXTERNAL}:${POSTGRES_PORT}
+    expose:
+      - ${POSTGRES_PORT}
+    volumes:
+      - ./data/_init/postgres-init.sh:/docker-entrypoint-initdb.d/init-postgres.sh
+      - volume_postgres:/var/lib/postgresql/data/
+  redis:
+    command: sh -c "/start.sh"
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          memory: 500M
+    env_file:
+      - .env.redis
+    healthcheck:
+      interval: 30s
+      retries: 3
+      start_period: 20s
+      test:
+        [ "CMD", "redis-cli", "-h", "$REDIS_IP_ADDRESS", "-p", "$REDIS_PORT", "-a", "$REDIS_PASSWORD", "--raw", "incr", "ping" ]
+    hostname: redis
+    image: redis:7-alpine
+    ports:
+      - ${REDIS_PORT_EXTERNAL}:${REDIS_PORT}
+    expose:
+      - ${REDIS_PORT}
+    volumes:
+      - ./data/_init/redis-start.sh:/start.sh
+      - volume_redis:/data
+  cron:
+    build:
+      context: .
+    env_file:
+      - .env
+    entrypoint: bash /app/cronjobs.sh
+    depends_on:
+#      - postgres
+#      - redis
+      - mongo
+    volumes:
+      - ./backups:/app/backups
+      - type: bind
+        source: ./cronjobs.sh
+        target: /app/cronjobs.sh
+        read_only: true
+volumes:
+  volume_mongo:
+  volume_postgres:
+  volume_redis:
