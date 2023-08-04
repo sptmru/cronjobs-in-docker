@@ -1,0 +1,7 @@
+.idea
+backups
+
+.env
+.env.mongo
+.env.postgres
+.env.redis
