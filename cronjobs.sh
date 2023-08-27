@@ -16,6 +16,11 @@ echo "0 1 * * * /usr/bin/mongodump --host=\"$MONGO_IP_ADDRESS\" --port=\"$MONGO_
 # mongo restore
 echo "0 0 * * 0 /usr/bin/mongorestore --host=\"$MONGO_IP_ADDRESS\" --port=\"$MONGO_PORT\" --username=\"$MONGO_INITDB_ROOT_USERNAME\" --password=\"$MONGO_INITDB_ROOT_PASSWORD\" /app/backup/mongo_dump  >> /app/logs/crontab.log 2>&1" > /etc/crontab
 
+# redis backup
+echo "0 1 * * * /usr/bin/tar czvf /app/backups/redis.tar.gz /redis/appendonlydir"
+# redis restore
+echo "0 0 * * 0 /usr/bin/tar xf /app/backups/redis.tar.gz -C /tmp/ && /usr/bin/rm /redis/appendonlydir/* && /usr/bin/mv /tmp/redis/appendonlydir/* /redis && /usr/bin/rm -rf /tmp/redis"
+
 # Registering the new crontab
 crontab /etc/crontab
 
