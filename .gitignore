@@ -1,6 +1,6 @@
 .idea
-backups
-
+backups/*
+!backups/.gitkeep
 .env
 .env.mongo
 .env.postgres
