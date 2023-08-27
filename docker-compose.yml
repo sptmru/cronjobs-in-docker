@@ -16,7 +16,7 @@ services:
       timeout: 10s
       retries: 5
     hostname: mongo
-    image: mongo:6.0
+    image: mongo:7.0
     ports:
       - ${MONGO_PORT_EXTERNAL}:${MONGO_PORT}
     expose:
@@ -79,11 +79,12 @@ services:
       - .env
     entrypoint: bash /app/cronjobs.sh
     depends_on:
-#      - postgres
-#      - redis
+      - postgres
+      - redis
       - mongo
     volumes:
       - ./backups:/app/backups
+      - volume_redis:/redis
       - type: bind
         source: ./cronjobs.sh
         target: /app/cronjobs.sh
